@@ -48,7 +48,7 @@ def run_many(fad:FAD):
             was_printed = stop_capturing_and_return_output()
             print(f"{INDENT}for {arg} …")
             for line in was_printed.split('\n'):
-                print(f"{INDENT*2}{line}")
+                 if len(line) > 0: print(f"{INDENT*2}{line}")
         print(f"finished {f.__name__}\n{SEPARATOR}")
 
 def compare_returns(fad:FAD, disable_output=True):
@@ -72,6 +72,21 @@ def compare_returns(fad:FAD, disable_output=True):
     if disable_output: stop_capturing_and_return_output()
     rConsole.print(table)
     #print(SEPARATOR)
+
+def compare_time_per_arg(fad:FAD, disable_output=True):
+    table = Table(style='plum3')
+    for column in ["~~~"] + [str(arg) for arg in fad.args]: table.add_column(column, header_style='orange1')
+    arg_time = {arg:{} for arg in fad.args}
+    
+    if disable_output: capture_output()
+    for f in fad.funcs:
+        for arg in fad.args:
+            _, time_elapsed = d_return_result_and_time(f, arg)
+            arg_time[arg][f.__name__] = time_elapsed
+        table.add_row(*tuple([f.__name__] + [f"{str(arg_time[arg][f.__name__])}ns\n{str(arg_time[arg][f.__name__] / (10**9))}s" for arg in fad.args]), style='bright_green')
+    if disable_output: stop_capturing_and_return_output()
+
+    rConsole.print(table)
 
 def compare_avg_time(fad:FAD, disable_output=True):
     table = Table(style='plum3')
