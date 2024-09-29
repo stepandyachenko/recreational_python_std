@@ -17,9 +17,11 @@ def capture_output():
     sys.stdout = io.StringIO()
 
 def stop_capturing_and_return_output():
-    output = sys.stdout.getvalue()
-    sys.stdout = sys.__stdout__
-    return output
+    if type(sys.stdout) == io.StringIO:
+        output = sys.stdout.getvalue()
+        sys.stdout = sys.__stdout__
+        return output
+    else: return "you messed up"
 
 def fit_str_in_n_symbols(s, n):
     if len(s) > n:
@@ -80,30 +82,36 @@ def compare_avg_time(fad:FAD, disable_output=True):
         i = 0
         for arg in fad.args:
             if f not in avg_time: avg_time[f] = 0
-            avg_time[f] += d_log_time(f, arg)
+            avg_time[f] += d_return_result_and_time(f, arg)[1]
             i += 1
         avg_time[f] /= i
         row = [str(round(avg_time[f] / 10**9, 3)), str(avg_time[f])]
         for res in row:
             res = fit_str_in_n_symbols(res, STAT_TABLE_MAX_WIDTH)
+        stop_capturing_and_return_output()
+        print(f)
         table.add_row(f.__name__, *tuple(row), style='bright_green')
     if disable_output: stop_capturing_and_return_output()
     rConsole.print(table)
 
+def d_return_result_and_time(f, *args):
+    x = time.time_ns()
+    result = f(*args)
+    time_elapsed = time.time_ns() - x
+    return result, time_elapsed
+
 def d_log_time(f, *args):
     if args:
         x = time.time_ns()
-        result = f(*args)
-        time_elapsed = time.time_ns() - x
+        result, time_elapsed = d_return_result_and_time(f, *args)
         print(f"\"{f.__name__}\" took {round(time_elapsed / 10**9, 3)} seconds or {time_elapsed} nanoseconds")
-        return time_elapsed
+        return result
     else:
         def wrapper(*args):
-            x = time.time_ns()
-            result = f(*args)
-            time_elapsed = time.time_ns() - x
+            wrapper.__name__ = f.__name__
+            result, time_elapsed = d_return_result_and_time(f, *args)
             print(f"\"{f.__name__}\" took {round(time_elapsed / 10**9, 3)} seconds or {time_elapsed} nanoseconds")
-            return time_elapsed
+            return result
         return wrapper
 
 def d_log_return(f, *args):
@@ -112,10 +120,10 @@ def d_log_return(f, *args):
         print(f"\"{f.__name__}\" returned {result if result != None else "nothing"}")
         return result
     else:
-        f_name = f.__name__
         def wrapper(*args):
+            wrapper.__name__ = f.__name__
             result = f(*args)
-            print(f"\"{f_name}\" returned {result if result != None else "nothing"}")
+            print(f"\"{f.__name__}\" returned {result if result != None else "nothing"}")
             return result
         return wrapper
 
@@ -128,6 +136,7 @@ def d_log_time_and_return(f, *args):
         return result
     else:
         def wrapper(*args):
+            wrapper.__name__ = f.__name__
             x = time.time_ns()
             result = f(*args)
             time_elapsed = time.time_ns() - x
